@@ -3,7 +3,7 @@ require 'nokogiri'
 require 'open-uri'
 require 'yaml'
 
-config = YAML.load(open("config.yml"))
+config = YAML.load(open("lunatic/config.yml"))
 usernames = config["usernames"]
 
 achieves = usernames.map do |username|
@@ -18,8 +18,8 @@ achieves = usernames.map do |username|
   end
 end.flatten
 
-if File.exists?("achieves.txt")
-  already = File.read("achieves.txt").split("\n")
+if File.exists?(config["achievements"])
+  already = File.read(config["achievements"]).split("\n")
   all_achieves = achieves + already
 else
   all_achieves = achieves
@@ -33,6 +33,6 @@ if config.key? "blacklist"
   all_achieves.reject! { |l| blacklist.include? l }
 end
 
-File.open("achieves.txt", "w") do |f|
+File.open(config["achievements"], "w") do |f|
   f << all_achieves.join("\n")
 end
