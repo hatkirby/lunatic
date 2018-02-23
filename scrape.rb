@@ -7,13 +7,13 @@ config = YAML.load(open(ARGV[0]))
 usernames = config["usernames"]
 
 achieves = usernames.map do |username|
-  page = Nokogiri::HTML(open("https://steamcommunity.com/id/#{username}/games/?tab=all"))
+  page = Nokogiri::HTML(open("https://steamcommunity.com/#{username}/games/?tab=all"))
   script = page.css(".responsive_page_template_content script").text[18..-1]
   data = JSON.parse(script[0..script.index(";\r\n\t\t")-1])
   ids = data.map { |d| d["appid"] }
 
   ids.map do |id|
-    achsp = Nokogiri::HTML(open("https://steamcommunity.com/id/#{username}/stats/#{id}/"))
+    achsp = Nokogiri::HTML(open("https://steamcommunity.com/#{username}/stats/#{id}/"))
     achsp.css(".achieveTxt .achieveUnlockTime + h3").map { |d| d.text }
   end
 end.flatten
