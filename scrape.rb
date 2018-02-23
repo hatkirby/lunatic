@@ -12,7 +12,11 @@ achieves = usernames.map do |username|
   data = JSON.parse(script[0..script.index(";\r\n\t\t")-1])
   ids = data.map { |d| d["appid"] }
 
+  index = 0
   ids.map do |id|
+    index += 1
+    puts "#{username} - #{index}/#{ids.count}"
+
     achsp = Nokogiri::HTML(open("https://steamcommunity.com/#{username}/stats/#{id}/"))
     achsp.css(".achieveTxt .achieveUnlockTime + h3").map { |d| d.text }
   end
