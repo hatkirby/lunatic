@@ -3,7 +3,7 @@ require 'nokogiri'
 require 'open-uri'
 require 'yaml'
 
-config = YAML.load(open("lunatic/config.yml"))
+config = YAML.load(open(ARGV[0]))
 usernames = config["usernames"]
 
 achieves = usernames.map do |username|
