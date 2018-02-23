@@ -77,7 +77,7 @@ int main(int argc, char** argv)
     std::cout << action << std::endl;
     std::cout << "Waiting" << std::endl;
 
-    std::this_thread::sleep_for(std::chrono::hours(3));
+    std::this_thread::sleep_for(std::chrono::hours(1));
 
     std::cout << std::endl;
   }
