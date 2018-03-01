@@ -5,6 +5,8 @@
 #include <twitter.h>
 #include <chrono>
 #include <thread>
+#include <Magick++.h>
+#include "database.h"
 
 int main(int argc, char** argv)
 {
@@ -13,6 +15,8 @@ int main(int argc, char** argv)
     std::cout << "usage: lunatic [configfile]" << std::endl;
     return -1;
   }
+
+  Magick::InitializeMagick(nullptr);
 
   std::string configfile(argv[1]);
   YAML::Node config = YAML::LoadFile(configfile);
@@ -23,7 +27,9 @@ int main(int argc, char** argv)
   auth.setAccessKey(config["access_key"].as<std::string>());
   auth.setAccessSecret(config["access_secret"].as<std::string>());
 
-  twitter::client client(auth);
+  //twitter::client client(auth);
+
+  database db(config["database"].as<std::string>());
 
   std::random_device randomDevice;
   std::mt19937 rng(randomDevice());
@@ -31,6 +37,40 @@ int main(int argc, char** argv)
   for (;;)
   {
     std::cout << "Generating tweet" << std::endl;
+
+    achievement ach = db.getRandomAchievement();
+    std::string imageName = db.getRandomImageForGame(ach.gameId);
+    std::string imagePath = config["images"].as<std::string>()
+      + "/" + imageName;
+
+
+    try
+    {
+      Magick::Image image;
+      image.read(imagePath);
+      image.transform("1600x900");
+      image.scale("160x90");
+      image.scale("1600x900");
+      image.magick("png");
+      image.write("output.png");
+    } catch (const Magick::WarningCoder& ex)
+    {
+      // Ok
+    }
+    
+
+
+
+
+
+
+
+
+
+
+
+
+    /*
 
     // Reload achievements list every time in case it has been updated
     std::vector<std::string> achievements;
@@ -53,7 +93,7 @@ int main(int argc, char** argv)
     }
 
     std::uniform_int_distribution<int> dist(0, achievements.size() - 1);
-    std::string achievement = achievements[dist(rng)];
+    std::string achievement = achievements[dist(rng)];*/
 
     std::string header;
     if (std::bernoulli_distribution(1.0 / 50.0)(rng))
@@ -63,16 +103,16 @@ int main(int argc, char** argv)
       header = "YOU GOT A MOON!";
     }
 
-    std::string action = header + "\n" + achievement;
+    std::string action = header + "\n" + ach.title;
     action.resize(140);
 
-    try
+    /*try
     {
       client.updateStatus(action);
     } catch (const twitter::twitter_error& e)
     {
       std::cout << "Twitter error: " << e.what() << std::endl;
-    }
+    }*/
 
     std::cout << action << std::endl;
     std::cout << "Waiting" << std::endl;

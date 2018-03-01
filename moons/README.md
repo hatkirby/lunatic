@@ -1,0 +1,1 @@
+The images in this directory are originally from the game Super Mario Odyssey, which is copyrighted by Nintendo.
