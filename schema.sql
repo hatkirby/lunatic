@@ -8,7 +8,7 @@ CREATE UNIQUE INDEX `profile_by_path` ON `profiles`(`profile_path`);
 CREATE TABLE `games` (
   `game_id` INTEGER PRIMARY KEY,
   `steam_appid` INTEGER NOT NULL,
-  `moon_image` VARCHAR(255) NOT NULL
+  `color` VARCHAR(255) NOT NULL
 );
 
 CREATE UNIQUE INDEX `game_by_appid` ON `games`(`steam_appid`);

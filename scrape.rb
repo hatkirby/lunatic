@@ -6,6 +6,20 @@ require 'rubygems'
 require 'bundler/setup'
 Bundler.require :default
 
+MOON_COLORS = [
+  :blue,
+  :brown,
+  :cyan,
+  :green,
+  :orange,
+  :pink,
+  :purple,
+  :red,
+  :star,
+  :white,
+  :yellow
+]
+
 @config = YAML.load(open(ARGV[0]))
 db_existed = File.exists?(@config["database"])
 db = Sequel.connect("sqlite://" + @config["database"])
@@ -47,10 +61,6 @@ class Did < Sequel::Model
   many_to_one :achievement
 end
 
-@moonimgs = Dir.entries(@config["moon_images"]).select do |img|
-  img.end_with? ".png"
-end
-
 def scrape_profile(profile, full)
   if full
     url = "https://steamcommunity.com/#{profile.profile_path}/games/?tab=all"
@@ -76,9 +86,9 @@ def scrape_profile(profile, full)
         if Game.where(steam_appid: id).count > 0
           game = Game.where(steam_appid: id).first
         else
-          moon_index = Random.rand(@moonimgs.size)
+          moon_index = Random.rand(MOON_COLORS.size)
 
-          game = Game.new(steam_appid: id, moon_image: @moonimgs[moon_index])
+          game = Game.new(steam_appid: id, color: MOON_COLORS[moon_index])
           game.save
 
           storepage = Nokogiri::HTML(
@@ -167,9 +177,9 @@ elsif ARGV[1] == "full"
   end
 elsif ARGV[1] == "recolor"
   Game.all.each do |game|
-    moon_index = Random.rand(@moonimgs.size)
+    moon_index = Random.rand(MOON_COLORS.size)
 
-    game.moon_image = @moonimgs[moon_index]
+    game.color = MOON_COLORS[moon_index]
     game.save
   end
 end

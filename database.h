@@ -9,7 +9,7 @@ struct achievement {
   int achievementId;
   int gameId;
   std::string title;
-  std::string moonImage;
+  std::string color;
 };
 
 class database {

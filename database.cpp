@@ -44,7 +44,7 @@ database::~database()
 
 achievement database::getRandomAchievement() const
 {
-  std::string queryString = "SELECT achievements.achievement_id, achievements.game_id, achievements.title, games.moon_image FROM achievements INNER JOIN games ON games.game_id = achievements.game_id ORDER BY RANDOM() LIMIT 1";
+  std::string queryString = "SELECT achievements.achievement_id, achievements.game_id, achievements.title, games.color FROM achievements INNER JOIN games ON games.game_id = achievements.game_id ORDER BY RANDOM() LIMIT 1";
 
   sqlite3_stmt* ppstmt;
   if (sqlite3_prepare_v2(
@@ -73,7 +73,7 @@ achievement database::getRandomAchievement() const
   result.achievementId = sqlite3_column_int(ppstmt, 0);
   result.gameId = sqlite3_column_int(ppstmt, 1);
   result.title = reinterpret_cast<const char*>(sqlite3_column_text(ppstmt, 2));
-  result.moonImage = reinterpret_cast<const char*>(sqlite3_column_text(ppstmt, 3));
+  result.color = reinterpret_cast<const char*>(sqlite3_column_text(ppstmt, 3));
 
   sqlite3_finalize(ppstmt);
 
