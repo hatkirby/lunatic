@@ -91,8 +91,11 @@ def scrape_profile(profile, full)
           game = Game.new(steam_appid: id, color: MOON_COLORS[moon_index])
           game.save
 
+          # The cookie is required for games that have an age restriction
           storepage = Nokogiri::HTML(
-            open("http://store.steampowered.com/app/#{id}"))
+            open(
+              "http://store.steampowered.com/app/#{id}",
+              "Cookie" => 'birthtime=126248401'))
 
           img_id = 0
           storepage.css(".highlight_screenshot_link").each do |node|
