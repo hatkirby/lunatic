@@ -12,6 +12,11 @@ struct achievement {
   std::string color;
 };
 
+struct did {
+  int profileId;
+  std::string date;
+};
+
 class database {
 public:
 
@@ -42,6 +47,8 @@ public:
   achievement getRandomAchievement() const;
 
   std::string getRandomImageForGame(int gameId) const;
+
+  did getRandomDidForAchievement(int achievementId) const;
 
 private:
 

@@ -6,7 +6,33 @@
 #include <chrono>
 #include <thread>
 #include <Magick++.h>
+#include <list>
+#include <string>
+#include <sstream>
 #include "database.h"
+
+template <class Container>
+Container split(std::string input, std::string delimiter)
+{
+  Container result;
+
+  while (!input.empty())
+  {
+    int divider = input.find(delimiter);
+    if (divider == std::string::npos)
+    {
+      result.push_back(input);
+
+      input = "";
+    } else {
+      result.push_back(input.substr(0, divider));
+
+      input = input.substr(divider+delimiter.length());
+    }
+  }
+
+  return result;
+}
 
 int main(int argc, char** argv)
 {
@@ -43,15 +69,88 @@ int main(int argc, char** argv)
     std::string imagePath = config["images"].as<std::string>()
       + "/" + imageName;
 
-    Magick::Image overlay;
-    overlay.read("res/overlay.png");
-
     Magick::Image moonColor;
     moonColor.read("res/" + ach.color + ".png");
 
     try
     {
-      // Start with the game image
+      // Start with the Odyssey text overlay
+      Magick::Image overlay;
+      overlay.read("res/overlay.png");
+
+      // Add the moon image
+      overlay.composite(moonColor, 672, 85, Magick::OverCompositeOp);
+
+      // Add the name of the achievement
+      overlay.fontPointsize(54);
+      overlay.fillColor("white");
+      overlay.font("@" + config["title_font"].as<std::string>());
+
+      std::list<std::string> words = split<std::list<std::string>>(
+        ach.title,
+        " ");
+      std::ostringstream wrappingStream;
+      std::string curline;
+      int lines = 1;
+
+      Magick::TypeMetric metric;
+      while (!words.empty())
+      {
+        std::string temp = curline;
+
+        if (!curline.empty())
+        {
+          temp += " ";
+        }
+
+        temp += words.front();
+
+        overlay.fontTypeMetrics(temp, &metric);
+
+        if (metric.textWidth() > 1200)
+        {
+          wrappingStream << std::endl;
+          curline = words.front();
+
+          lines++;
+        } else {
+          if (!curline.empty())
+          {
+            wrappingStream << " ";
+          }
+
+          curline = temp;
+        }
+
+        wrappingStream << words.front();
+        words.pop_front();
+      }
+
+      std::string wrapped = wrappingStream.str();
+
+      overlay.annotate(
+        wrapped,
+        Magick::Geometry(1600, 228, 0, 710),
+        Magick::GravityType::NorthGravity);
+
+      // Add the achievement date
+      did theDid = db.getRandomDidForAchievement(ach.achievementId);
+
+      overlay.fontTypeMetrics(wrapped, &metric);
+
+      overlay.fontPointsize(20);
+      overlay.font("@" + config["date_font"].as<std::string>());
+      overlay.annotate(
+        theDid.date,
+        Magick::Geometry(1600, 228, 0, 710 + metric.textHeight() * lines - 22),
+        Magick::GravityType::NorthGravity);
+
+      // Make a shadow copy
+      Magick::Image shadow(overlay);
+      shadow.negate();
+      shadow.blur(0, 12);
+
+      // Read the game image
       Magick::Image image;
       image.read(imagePath);
 
@@ -60,18 +159,9 @@ int main(int argc, char** argv)
       image.scale("80x45");
       image.scale("1600x900");
 
-      // Add the text and moon image from Odyssey
+      // Add the generated overlay to it
+      image.composite(shadow, 0, 0, Magick::OverCompositeOp);
       image.composite(overlay, 0, 0, Magick::OverCompositeOp);
-      image.composite(moonColor, 672, 85, Magick::OverCompositeOp);
-
-      // Add the name of the achievement
-      image.fontPointsize(36);
-      image.fillColor("white");
-      image.font("@" + config["font"].as<std::string>());
-      image.annotate(
-        ach.title,
-        Magick::Geometry(0, 0, 0, 672),
-        Magick::GravityType::NorthGravity);
 
       // Output for debug
       image.magick("png");
