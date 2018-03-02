@@ -43,65 +43,45 @@ int main(int argc, char** argv)
     std::string imagePath = config["images"].as<std::string>()
       + "/" + imageName;
 
+    Magick::Image overlay;
+    overlay.read("res/overlay.png");
+
+    Magick::Image moonColor;
+    moonColor.read("res/" + ach.color + ".png");
 
     try
     {
+      // Start with the game image
       Magick::Image image;
       image.read(imagePath);
-      image.transform("1600x900");
-      image.scale("160x90");
+
+      // Stretch and pixelate it
+      image.transform("1600x900!");
+      image.scale("80x45");
       image.scale("1600x900");
+
+      // Add the text and moon image from Odyssey
+      image.composite(overlay, 0, 0, Magick::OverCompositeOp);
+      image.composite(moonColor, 672, 85, Magick::OverCompositeOp);
+
+      // Add the name of the achievement
+      image.fontPointsize(36);
+      image.fillColor("white");
+      image.font("@" + config["font"].as<std::string>());
+      image.annotate(
+        ach.title,
+        Magick::Geometry(0, 0, 0, 672),
+        Magick::GravityType::NorthGravity);
+
+      // Output for debug
       image.magick("png");
       image.write("output.png");
     } catch (const Magick::WarningCoder& ex)
     {
       // Ok
     }
-    
 
-
-
-
-
-
-
-
-
-
-
-
-    /*
-
-    // Reload achievements list every time in case it has been updated
-    std::vector<std::string> achievements;
-    std::ifstream datafile(config["achievements"].as<std::string>());
-    if (!datafile.is_open())
-    {
-      std::cout << "Could not find achievements file." << std::endl;
-      return 1;
-    }
-
-    std::string line;
-    while (getline(datafile, line))
-    {
-      if (line.back() == '\r')
-      {
-        line.pop_back();
-      }
-
-      achievements.push_back(line);
-    }
-
-    std::uniform_int_distribution<int> dist(0, achievements.size() - 1);
-    std::string achievement = achievements[dist(rng)];*/
-
-    std::string header;
-    if (std::bernoulli_distribution(1.0 / 50.0)(rng))
-    {
-      header = "YOU GOT A MULTI MOON!";
-    } else {
-      header = "YOU GOT A MOON!";
-    }
+    std::string header = "YOU GOT A MOON!";
 
     std::string action = header + "\n" + ach.title;
     action.resize(140);
