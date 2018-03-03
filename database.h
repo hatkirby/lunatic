@@ -46,6 +46,8 @@ public:
 
   achievement getRandomAchievement() const;
 
+  bool doesGameHaveImages(int gameId) const;
+
   std::string getRandomImageForGame(int gameId) const;
 
   did getRandomDidForAchievement(int achievementId) const;

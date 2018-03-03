@@ -82,6 +82,47 @@ achievement database::getRandomAchievement() const
   return result;
 }
 
+bool database::doesGameHaveImages(int gameId) const
+{
+  std::string queryString = "SELECT COUNT(*) FROM images WHERE game_id = ? ORDER BY RANDOM() LIMIT 1";
+
+  sqlite3_stmt* ppstmt;
+  if (sqlite3_prepare_v2(
+    ppdb_,
+    queryString.c_str(),
+    queryString.length(),
+    &ppstmt,
+    NULL) != SQLITE_OK)
+  {
+    std::string errorMsg = sqlite3_errmsg(ppdb_);
+    sqlite3_finalize(ppstmt);
+
+    throw std::logic_error(errorMsg);
+  }
+
+  if (sqlite3_bind_int(ppstmt, 1, gameId) != SQLITE_OK)
+  {
+    std::string errorMsg = sqlite3_errmsg(ppdb_);
+    sqlite3_finalize(ppstmt);
+
+    throw std::logic_error(errorMsg);
+  }
+
+  if (sqlite3_step(ppstmt) != SQLITE_ROW)
+  {
+    std::string errorMsg = sqlite3_errmsg(ppdb_);
+    sqlite3_finalize(ppstmt);
+
+    throw std::logic_error(errorMsg);
+  }
+
+  int result = sqlite3_column_int(ppstmt, 0);
+
+  sqlite3_finalize(ppstmt);
+
+  return (result > 0);
+}
+
 std::string database::getRandomImageForGame(int gameId) const
 {
   std::string queryString = "SELECT filename FROM images WHERE game_id = ? ORDER BY RANDOM() LIMIT 1";

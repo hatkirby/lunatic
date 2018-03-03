@@ -65,9 +65,6 @@ int main(int argc, char** argv)
     std::cout << "Generating tweet" << std::endl;
 
     achievement ach = db.getRandomAchievement();
-    std::string imageName = db.getRandomImageForGame(ach.gameId);
-    std::string imagePath = config["images"].as<std::string>()
-      + "/" + imageName;
 
     Magick::Image moonColor;
     moonColor.read("res/" + ach.color + ".png");
@@ -150,14 +147,25 @@ int main(int argc, char** argv)
       shadow.negate();
       shadow.blur(0, 12);
 
-      // Read the game image
+      // Read the game image, using a default if the game has no images
       Magick::Image image;
-      image.read(imagePath);
 
-      // Stretch and pixelate it
-      image.transform("1600x900!");
-      image.scale("80x45");
-      image.scale("1600x900");
+      if (db.doesGameHaveImages(ach.gameId))
+      {
+        std::string imageName = db.getRandomImageForGame(ach.gameId);
+        std::string imagePath = config["images"].as<std::string>()
+          + "/" + imageName;
+
+        image.read(imagePath);
+
+        // Stretch and pixelate it
+        image.transform("1600x900!");
+        image.scale("80x45");
+        image.scale("1600x900");
+      } else {
+        image.read("res/default.png");
+        image.transform("1600x900!");
+      }
 
       // Add the generated overlay to it
       image.composite(shadow, 0, 0, Magick::OverCompositeOp);

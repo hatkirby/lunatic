@@ -1,1 +1,1 @@
-The images in this directory are originally from the game Super Mario Odyssey, which is copyrighted by Nintendo.
+The images in this directory, apart from overlay.png and overlay.psd, are originally from the game Super Mario Odyssey, which is copyrighted by Nintendo.
