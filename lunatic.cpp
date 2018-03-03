@@ -8,6 +8,7 @@
 #include <Magick++.h>
 #include <list>
 #include <string>
+#include <set>
 #include <sstream>
 #include "database.h"
 
@@ -60,11 +61,38 @@ int main(int argc, char** argv)
   std::random_device randomDevice;
   std::mt19937 rng(randomDevice());
 
+  std::set<std::string> blacklist;
+  if (config["blacklist"].IsScalar())
+  {
+    std::ifstream blfile(config["blacklist"].as<std::string>());
+
+    if (!blfile.is_open())
+    {
+      throw std::invalid_argument("Could not find blacklist");
+    }
+
+    std::string line;
+    while (getline(blfile, line))
+    {
+      if (line.back() == '\r')
+      {
+        line.pop_back();
+      }
+
+      blacklist.insert(line);
+    }
+  }
+
   for (;;)
   {
     std::cout << "Generating tweet" << std::endl;
 
     achievement ach = db.getRandomAchievement();
+
+    if (blacklist.count(ach.title))
+    {
+      continue;
+    }
 
     Magick::Image moonColor;
     moonColor.read("res/" + ach.color + ".png");
