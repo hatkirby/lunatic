@@ -54,7 +54,7 @@ int main(int argc, char** argv)
   auth.setAccessKey(config["access_key"].as<std::string>());
   auth.setAccessSecret(config["access_secret"].as<std::string>());
 
-  //twitter::client client(auth);
+  twitter::client client(auth);
 
   database db(config["database"].as<std::string>());
 
@@ -97,132 +97,159 @@ int main(int argc, char** argv)
     Magick::Image moonColor;
     moonColor.read("res/" + ach.color + ".png");
 
+    // Start with the Odyssey text overlay
+    Magick::Image overlay;
     try
     {
-      // Start with the Odyssey text overlay
-      Magick::Image overlay;
       overlay.read("res/overlay.png");
+    } catch (const Magick::WarningCoder& ex)
+    {
+      // Ok
+    }
 
-      // Add the moon image
-      overlay.composite(moonColor, 672, 85, Magick::OverCompositeOp);
+    // Add the moon image
+    overlay.composite(moonColor, 672, 85, Magick::OverCompositeOp);
 
-      // Add the name of the achievement
-      overlay.fontPointsize(54);
-      overlay.fillColor("white");
-      overlay.font("@" + config["title_font"].as<std::string>());
+    // Add the name of the achievement
+    overlay.fontPointsize(54);
+    overlay.fillColor("white");
+    overlay.font("@" + config["title_font"].as<std::string>());
 
-      std::list<std::string> words = split<std::list<std::string>>(
-        ach.title,
-        " ");
-      std::ostringstream wrappingStream;
-      std::string curline;
-      int lines = 1;
+    std::list<std::string> words = split<std::list<std::string>>(
+      ach.title,
+      " ");
+    std::ostringstream wrappingStream;
+    std::string curline;
+    int lines = 1;
 
-      Magick::TypeMetric metric;
-      while (!words.empty())
+    Magick::TypeMetric metric;
+    while (!words.empty())
+    {
+      std::string temp = curline;
+
+      if (!curline.empty())
       {
-        std::string temp = curline;
+        temp += " ";
+      }
 
+      temp += words.front();
+
+      overlay.fontTypeMetrics(temp, &metric);
+
+      if (metric.textWidth() > 1200)
+      {
+        wrappingStream << std::endl;
+        curline = words.front();
+
+        lines++;
+      } else {
         if (!curline.empty())
         {
-          temp += " ";
+          wrappingStream << " ";
         }
 
-        temp += words.front();
-
-        overlay.fontTypeMetrics(temp, &metric);
-
-        if (metric.textWidth() > 1200)
-        {
-          wrappingStream << std::endl;
-          curline = words.front();
-
-          lines++;
-        } else {
-          if (!curline.empty())
-          {
-            wrappingStream << " ";
-          }
-
-          curline = temp;
-        }
-
-        wrappingStream << words.front();
-        words.pop_front();
+        curline = temp;
       }
 
-      std::string wrapped = wrappingStream.str();
+      wrappingStream << words.front();
+      words.pop_front();
+    }
 
-      overlay.annotate(
-        wrapped,
-        Magick::Geometry(1600, 228, 0, 710),
-        Magick::GravityType::NorthGravity);
+    std::string wrapped = wrappingStream.str();
 
-      // Add the achievement date
-      did theDid = db.getRandomDidForAchievement(ach.achievementId);
+    overlay.annotate(
+      wrapped,
+      Magick::Geometry(1600, 228, 0, 710),
+      Magick::GravityType::NorthGravity);
 
-      overlay.fontTypeMetrics(wrapped, &metric);
+    // Add the achievement date
+    did theDid = db.getRandomDidForAchievement(ach.achievementId);
 
-      overlay.fontPointsize(20);
-      overlay.font("@" + config["date_font"].as<std::string>());
-      overlay.annotate(
-        theDid.date,
-        Magick::Geometry(1600, 228, 0, 710 + metric.textHeight() * lines - 22),
-        Magick::GravityType::NorthGravity);
+    overlay.fontTypeMetrics(wrapped, &metric);
 
-      // Make a shadow copy
-      Magick::Image shadow(overlay);
-      shadow.negate();
-      shadow.blur(0, 12);
+    overlay.fontPointsize(20);
+    overlay.font("@" + config["date_font"].as<std::string>());
+    overlay.annotate(
+      theDid.date,
+      Magick::Geometry(1600, 228, 0, 710 + metric.textHeight() * lines - 22),
+      Magick::GravityType::NorthGravity);
 
-      // Read the game image, using a default if the game has no images
-      Magick::Image image;
+    // Make a shadow copy
+    Magick::Image shadow(overlay);
+    shadow.negate();
+    shadow.blur(0, 12);
 
-      if (db.doesGameHaveImages(ach.gameId))
+    // Read the game image, using a default if the game has no images
+    Magick::Image image;
+
+    if (db.doesGameHaveImages(ach.gameId))
+    {
+      std::string imageName = db.getRandomImageForGame(ach.gameId);
+      std::string imagePath = config["images"].as<std::string>()
+        + "/" + imageName;
+
+      try
       {
-        std::string imageName = db.getRandomImageForGame(ach.gameId);
-        std::string imagePath = config["images"].as<std::string>()
-          + "/" + imageName;
-
         image.read(imagePath);
-
-        // Stretch and pixelate it
-        image.transform("1600x900!");
-        image.scale("80x45");
-        image.scale("1600x900");
-      } else {
-        image.read("res/default.png");
-        image.transform("1600x900!");
+      } catch (const Magick::WarningCoder& ex)
+      {
+        // Ok
       }
 
-      // Add the generated overlay to it
-      image.composite(shadow, 0, 0, Magick::OverCompositeOp);
-      image.composite(overlay, 0, 0, Magick::OverCompositeOp);
+      // Stretch and pixelate it
+      image.transform("1600x900!");
+      image.scale("80x45");
+      image.scale("1600x900");
+    } else {
+      try
+      {
+        image.read("res/default.png");
+      } catch (const Magick::WarningCoder& ex)
+      {
+        // Ok
+      }
 
-      // Output for debug
-      image.magick("png");
-      image.write("output.png");
+      image.transform("1600x900!");
+    }
+
+    // Add the generated overlay to it
+    image.composite(shadow, 0, 0, Magick::OverCompositeOp);
+    image.composite(overlay, 0, 0, Magick::OverCompositeOp);
+
+    // Output image
+    Magick::Blob outputBlob;
+    image.magick("png");
+
+    try
+    {
+      image.write(&outputBlob);
     } catch (const Magick::WarningCoder& ex)
     {
       // Ok
     }
 
     std::string header = "YOU GOT A MOON!";
-
     std::string action = header + "\n" + ach.title;
     action.resize(140);
 
-    /*try
+    std::cout << action << std::endl;
+
+    try
     {
-      client.updateStatus(action);
+      long media_id = client.uploadMedia(
+        "image/png",
+        static_cast<const char*>(outputBlob.data()),
+        outputBlob.length());
+
+      client.updateStatus(action, {media_id});
+
+      std::cout << "Tweeted!" << std::endl;
     } catch (const twitter::twitter_error& e)
     {
       std::cout << "Twitter error: " << e.what() << std::endl;
-    }*/
+    }
 
-    std::cout << action << std::endl;
-    std::cout << "Waiting" << std::endl;
-
+    std::cout << "Waiting..." << std::endl;
     std::this_thread::sleep_for(std::chrono::hours(1));
 
     std::cout << std::endl;
