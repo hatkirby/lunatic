@@ -31,3 +31,5 @@ CREATE TABLE `images` (
   `game_id` INTEGER NOT NULL,
   `filename` VARCHAR(255) NOT NULL
 );
+
+CREATE INDEX `game_images` ON `images`(`game_id`,`image_id`);
