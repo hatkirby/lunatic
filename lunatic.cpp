@@ -10,30 +10,9 @@
 #include <string>
 #include <set>
 #include <sstream>
-#include "database.h"
-
-template <class Container>
-Container split(std::string input, std::string delimiter)
-{
-  Container result;
-
-  while (!input.empty())
-  {
-    int divider = input.find(delimiter);
-    if (divider == std::string::npos)
-    {
-      result.push_back(input);
-
-      input = "";
-    } else {
-      result.push_back(input.substr(0, divider));
-
-      input = input.substr(divider+delimiter.length());
-    }
-  }
-
-  return result;
-}
+#include <hkutil/string.h>
+#include <hkutil/database.h>
+#include <iomanip>
 
 int main(int argc, char** argv)
 {
@@ -56,7 +35,9 @@ int main(int argc, char** argv)
 
   twitter::client client(auth);
 
-  database db(config["database"].as<std::string>());
+  hatkirby::database database(
+    config["database"].as<std::string>(),
+    hatkirby::dbmode::read);
 
   std::random_device randomDevice;
   std::mt19937 rng(randomDevice());
@@ -87,15 +68,29 @@ int main(int argc, char** argv)
   {
     std::cout << "Generating tweet" << std::endl;
 
-    achievement ach = db.getRandomAchievement();
+    hatkirby::row achRow =
+      database.queryFirst(
+        "SELECT achievements.achievement_id,                                   \
+                achievements.game_id,                                          \
+                achievements.title,                                            \
+                games.color                                                    \
+         FROM achievements                                                     \
+         INNER JOIN games ON games.game_id = achievements.game_id              \
+         ORDER BY RANDOM()                                                     \
+         LIMIT 1");
 
-    if (blacklist.count(ach.title))
+    int achId = mpark::get<int>(achRow[0]);
+    int gameId = mpark::get<int>(achRow[1]);
+    std::string achTitle = mpark::get<std::string>(achRow[2]);
+    std::string achColor = mpark::get<std::string>(achRow[3]);
+
+    if (blacklist.count(achTitle))
     {
       continue;
     }
 
     Magick::Image moonColor;
-    moonColor.read("res/" + ach.color + ".png");
+    moonColor.read("res/" + achColor + ".png");
 
     // Start with the Odyssey text overlay
     Magick::Image overlay;
@@ -115,9 +110,11 @@ int main(int argc, char** argv)
     overlay.fillColor("white");
     overlay.font("@" + config["title_font"].as<std::string>());
 
-    std::list<std::string> words = split<std::list<std::string>>(
-      ach.title,
-      " ");
+    std::list<std::string> words =
+      hatkirby::split<std::list<std::string>>(
+        achTitle,
+        " ");
+
     std::ostringstream wrappingStream;
     std::string curline;
     int lines = 1;
@@ -163,14 +160,32 @@ int main(int argc, char** argv)
       Magick::GravityType::NorthGravity);
 
     // Add the achievement date
-    did theDid = db.getRandomDidForAchievement(ach.achievementId);
+    hatkirby::row didRow =
+      database.queryFirst(
+        "SELECT DATETIME(achieved_at)                                          \
+         FROM dids                                                             \
+         WHERE achievement_id = ?                                              \
+         ORDER BY RANDOM()                                                     \
+         LIMIT 1",
+        { achId });
+
+    std::tm achievedAt = {};
+
+    std::stringstream dateParser;
+    dateParser << mpark::get<std::string>(didRow[0]);
+    dateParser >> std::get_time(&achievedAt, "%Y-%m-%d %H:%M:%S");
+
+    std::stringstream dateFormatter;
+    dateFormatter << std::put_time(&achievedAt, "%m/%d/%Y");
+
+    std::string didDate = dateFormatter.str();
 
     overlay.fontTypeMetrics(wrapped, &metric);
 
     overlay.fontPointsize(20);
     overlay.font("@" + config["date_font"].as<std::string>());
     overlay.annotate(
-      theDid.date,
+      didDate,
       Magick::Geometry(1600, 228, 0, 710 + metric.textHeight() * lines - 22),
       Magick::GravityType::NorthGravity);
 
@@ -182,9 +197,25 @@ int main(int argc, char** argv)
     // Read the game image, using a default if the game has no images
     Magick::Image image;
 
-    if (db.doesGameHaveImages(ach.gameId))
+    hatkirby::row checkRow =
+      database.queryFirst(
+        "SELECT COUNT(*)                                                       \
+         FROM images                                                           \
+         WHERE game_id = ?",
+        { gameId });
+
+    if (mpark::get<int>(checkRow[0]) > 0)
     {
-      std::string imageName = db.getRandomImageForGame(ach.gameId);
+      hatkirby::row imageRow =
+        database.queryFirst(
+          "SELECT filename                                                     \
+           FROM images                                                         \
+           WHERE game_id = ?                                                   \
+           ORDER BY RANDOM()                                                   \
+           LIMIT 1",
+          { gameId });
+
+      std::string imageName = mpark::get<std::string>(imageRow[0]);
       std::string imagePath = config["images"].as<std::string>()
         + "/" + imageName;
 
@@ -229,7 +260,7 @@ int main(int argc, char** argv)
     }
 
     std::string header = "YOU GOT A MOON!";
-    std::string action = header + "\n" + ach.title;
+    std::string action = header + "\n" + achTitle;
     action.resize(140);
 
     std::cout << action << std::endl;

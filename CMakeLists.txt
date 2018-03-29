@@ -11,11 +11,12 @@ pkg_check_modules(sqlite3 sqlite3>=3.8.3 REQUIRED)
 include_directories(
   vendor/libtwittercpp/src
   ${yaml-cpp_INCLUDE_DIRS}
-  ${GraphicsMagick_INCLUDE_DIRS})
+  ${GraphicsMagick_INCLUDE_DIRS}
+  vendor/hkutil)
 
 link_directories(${GraphicsMagick_LIBRARY_DIRS})
 
-add_executable(lunatic lunatic.cpp database.cpp)
+add_executable(lunatic lunatic.cpp)
 set_property(TARGET lunatic PROPERTY CXX_STANDARD 11)
 set_property(TARGET lunatic PROPERTY CXX_STANDARD_REQUIRED ON)
 target_link_libraries(lunatic ${yaml-cpp_LIBRARIES} ${GraphicsMagick_LIBRARIES} ${sqlite3_LIBRARIES} twitter++)
