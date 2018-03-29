@@ -20,10 +20,11 @@ CREATE TABLE `achievements` (
 );
 
 CREATE TABLE `dids` (
-  `profile_id` INTEGER NOT NULL,
   `achievement_id` INTEGER NOT NULL,
-  `achieved_at` DATETIME NOT NULL
-);
+  `profile_id` INTEGER NOT NULL,
+  `achieved_at` DATETIME NOT NULL,
+  PRIMARY KEY (`achievement_id`, `profile_id`)
+) WITHOUT ROWID;
 
 CREATE TABLE `images` (
   `image_id` INTEGER PRIMARY KEY,
